@@ -6,6 +6,7 @@ Various tests for standards compliance in Lando Drupal projects.
 - composer: See https://getcomposer.org/download/.
 - cgr: See https://github.com/consolidation/cgr.
 - drush: See https://www.drush.org/latest/install/.
+
 _Note: These prerequisites are only necessary if you plan on running from your host and not in your project container._
 
 ## Installation
