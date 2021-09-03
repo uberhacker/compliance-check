@@ -1,0 +1,128 @@
+#!/bin/bash
+
+# Various tests for standards compliance in Lando Drupal projects.
+
+# Written by Ed Reel (edreel at gmail dot com).
+
+# Released under the GPLv3 license.
+
+# This can be run outside the Docker container instance from the host
+# but in order to view the report, the Lando project must be started.
+
+# Run pre-flight checks.
+[ ! -f .lando.yml ] && echo ".lando.yml is missing.  Run 'lando init' to add or cd to the directory where it can be found." && exit 1
+COMPOSER=$(command -v composer 2> /dev/null)
+[ -z "${COMPOSER}" ] && echo "composer command not found. See https://getcomposer.org/download/." && exit 1
+CGR=$(command -v cgr 2> /dev/null)
+[ -z "${CGR}" ] && echo "cgr command not found. See https://github.com/consolidation/cgr." && exit 1
+DRUSH=$(command -v drush 2> /dev/null)
+[ -z "${DRUSH}" ] && echo "drush command not found. See https://www.drush.org/latest/install/." && exit 1
+DRUPAL_VERSION=$(${DRUSH} status --fields='Drupal version' 2> /dev/null | cut -d':' -f2 | xargs | cut -d'.' -f1)
+[ -z "${DRUPAL_VERSION}" ] && echo "Drupal codebase not found." && exit 1
+
+# Set environment variables.
+COMPOSER_HOME=$(${COMPOSER} global config home 2> /dev/null)
+BIN_DIR=${COMPOSER_HOME}/vendor/bin
+DRUPAL_ROOT=$(pwd)/$(grep webroot .lando.yml | cut -d':' -f2 | xargs)
+LOGS_DIR=${DRUPAL_ROOT}/logs
+TESTS_DIR=${DRUPAL_ROOT}/tests
+THEME_DIR=themes
+MODULE_DIR=modules
+PROFILE_DIR=profiles
+if [[ ${DRUPAL_VERSION} == 7 ]]; then
+  THEME_DIR=sites/*/themes
+  MODULE_DIR=sites/*/modules
+  PROFILE_DIR=sites/*/profiles
+fi
+CUSTOM_THEME_DIR=${DRUPAL_ROOT}/${THEME_DIR}/custom
+CUSTOM_MODULE_DIR=${DRUPAL_ROOT}/${MODULE_DIR}/custom
+CUSTOM_PROFILE_DIR=${DRUPAL_ROOT}/${PROFILE_DIR}/custom
+
+# Prepare directories.
+[ ! -d ${LOGS_DIR} ] && mkdir ${LOGS_DIR}
+[ ! -d ${TESTS_DIR} ] && mkdir ${TESTS_DIR}
+
+# Install php parallel-lint.
+if [ ! -f ${BIN_DIR}/parallel-lint ]; then
+  ${CGR} php-parallel-lint/php-parallel-lint
+fi
+echo "Running php linter..."
+parallel-lint ${DRUPAL_ROOT}
+
+# Install security-checker.
+if [ ! -f ${BIN_DIR}/security-checker ]; then
+  ${CGR} enlightn/security-checker
+fi
+
+echo "Running yaml linter..."
+yaml-lint .
+
+# Run security-checker.
+if [[ ${DRUPAL_VERSION} > 7 ]]; then
+  echo "Checking for security updates..."
+  security-checker security:check
+fi
+
+# Install copy and paste detection.
+if [ ! -f ${BIN_DIR}/phpcpd ]; then
+  ${CGR} sebastian/phpcpd
+fi
+echo "Running php copy and paste detection..."
+if [ -d ${CUSTOM_PROFILE_DIR} ]; then
+  phpcpd --log-pmd ${LOGS_DIR}/phpcpd.xml --suffix ".php,.module,.theme,.profile,.inc,.test,.install" ${CUSTOM_PROFILE_DIR} || :
+fi
+if [ -d ${CUSTOM_MODULE_DIR} ]; then
+  phpcpd --log-pmd ${LOGS_DIR}/phpcpd.xml --suffix ".php,.module,.theme,.profile,.inc,.test,.install" ${CUSTOM_MODULE_DIR} || :
+fi
+if [ -d ${CUSTOM_THEME_DIR} ]; then
+  phpcpd --log-pmd ${LOGS_DIR}/phpcpd.xml --suffix ".php,.module,.theme,.profile,.inc,.test,.install" ${CUSTOM_THEME_DIR} || :
+fi
+
+# Configure codesniffer standards to check.
+if [ ! -f ${BIN_DIR}/phpcs ]; then
+  ${CGR} drupal/coder phpcompatibility/php-compatibility
+  phpcs --config-set installed_paths ${COMPOSER_HOME}/global/drupal/coder/vendor/drupal/coder/coder_sniffer,${COMPOSER_HOME}/global/phpcompatibility/php-compatibility/vendor/phpcompatibility/php-compatibility/PHPCompatibility
+  phpcs -i
+fi
+if [ ! -d ${HOME}/drupal_code_standards ]; then
+  cd && git clone https://github.com/nilswloewen/drupal_code_standards.git
+  phpcs --config-set default_standard ${HOME}/drupal_code_standards/phpcs-custom-standard.xml
+fi
+
+# Run codesniffer with the Drupal standards checks. See http://unix.wikia.com/wiki/Force_exit_code_0
+# for info about the operator on the end of the command.
+echo "Running php code sniffer..."
+if [ -d ${CUSTOM_PROFILE_DIR} ]; then
+  phpcs --report=checkstyle --report-file=${LOGS_DIR}/phpcs.xml --extensions=php,module,theme,profile,inc,test,install ${CUSTOM_PROFILE_DIR} || :
+fi
+if [ -d ${CUSTOM_MODULE_DIR} ]; then
+  phpcs --report=checkstyle --report-file=${LOGS_DIR}/phpcs.xml --extensions=php,module,theme,profile,inc,test,install ${CUSTOM_MODULE_DIR} || :
+fi
+if [ -d ${CUSTOM_THEME_DIR} ]; then
+  phpcs --report=checkstyle --report-file=${LOGS_DIR}/phpcs.xml --extensions=php,module,theme,profile,inc,test,install ${CUSTOM_THEME_DIR} || :
+fi
+
+# Run PHP Mess Detector to find potential refactoring opportunities.
+if [ ! -f ${BIN_DIR}/phpmd ]; then
+  ${CGR} phpmd/phpmd
+fi
+echo "Running php mess detector..."
+if [ -d ${CUSTOM_PROFILE_DIR} ]; then
+  phpmd ${CUSTOM_PROFILE_DIR} xml cleancode,codesize,controversial,design,naming,unusedcode --reportfile ${LOGS_DIR}/phpmd.xml --suffixes php,module,theme,profile,inc,test,install || :
+fi
+if [ -d ${CUSTOM_MODULE_DIR} ]; then
+  phpmd ${CUSTOM_MODULE_DIR} xml cleancode,codesize,controversial,design,naming,unusedcode --reportfile ${LOGS_DIR}/phpmd.xml --suffixes php,module,theme,profile,inc,test,install || :
+fi
+if [ -d ${CUSTOM_THEME_DIR} ]; then
+  phpmd ${CUSTOM_THEME_DIR} xml cleancode,codesize,controversial,design,naming,unusedcode --reportfile ${LOGS_DIR}/phpmd.xml --suffixes php,module,theme,profile,inc,test,install || :
+fi
+
+# Use code browser to augment the logs.
+if [ ! -f ${BIN_DIR}/phpcb ]; then
+  ${CGR} mayflower/php-codebrowser
+fi
+phpcb -l ${LOGS_DIR} -o ${TESTS_DIR}
+
+# View test results in the browser.
+PROJECT=$(grep ^name: .lando.yml | cut -d':' -f2 | xargs)
+echo "Visit http://${PROJECT}.lndo.site/tests/index.html to view the complete test results."
