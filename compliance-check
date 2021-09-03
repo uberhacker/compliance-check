@@ -24,6 +24,7 @@ DRUPAL_VERSION=$(${DRUSH} status --fields='Drupal version' 2> /dev/null | cut -d
 COMPOSER_HOME=$(${COMPOSER} global config home 2> /dev/null)
 BIN_DIR=${COMPOSER_HOME}/vendor/bin
 DRUPAL_ROOT=$(pwd)/$(grep webroot .lando.yml | cut -d':' -f2 | xargs)
+LANDO_APP_NAME=${LANDO_APP_NAME:-$(grep ^name: .lando.yml | cut -d':' -f2 | xargs)}
 LOGS_DIR=${DRUPAL_ROOT}/logs
 TESTS_DIR=${DRUPAL_ROOT}/tests
 THEME_DIR=themes
@@ -124,5 +125,4 @@ fi
 phpcb -l ${LOGS_DIR} -o ${TESTS_DIR}
 
 # View test results in the browser.
-PROJECT=$(grep ^name: .lando.yml | cut -d':' -f2 | xargs)
-echo "Visit http://${PROJECT}.lndo.site/tests/index.html to view the complete test results."
+echo "Visit http://${LANDO_APP_NAME}.lndo.site/tests/index.html to view the complete test results."
