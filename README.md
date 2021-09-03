@@ -23,5 +23,5 @@ _See https://docs.lando.dev/config/lando.html#override-file for more information
 ## Usage
 ```bash
 $ cd /path/to/drupal/project/root
-$ compliance-check
+$ compliance-check (or 'lando compliance-check' to run from the project container)
 ```
