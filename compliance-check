@@ -17,13 +17,13 @@ CGR=$(command -v cgr 2> /dev/null)
 [ -z "${CGR}" ] && echo "cgr command not found. See https://github.com/consolidation/cgr." && exit 1
 DRUSH=$(command -v drush 2> /dev/null)
 [ -z "${DRUSH}" ] && echo "drush command not found. See https://www.drush.org/latest/install/." && exit 1
-DRUPAL_VERSION=$(${DRUSH} status --fields='Drupal version' 2> /dev/null | cut -d':' -f2 | xargs | cut -d'.' -f1)
+DRUPAL_ROOT=$(pwd)/$(grep webroot .lando.yml | cut -d':' -f2 | xargs)
+DRUPAL_VERSION=$(${DRUSH} status --root=${DRUPAL_ROOT} --fields='Drupal version' 2> /dev/null | cut -d':' -f2 | xargs | cut -d'.' -f1)
 [ -z "${DRUPAL_VERSION}" ] && echo "Drupal codebase not found." && exit 1
 
 # Set environment variables.
-COMPOSER_HOME=$(${COMPOSER} global config home 2> /dev/null)
+COMPOSER_HOME=$(${COMPOSER} global config home)
 BIN_DIR=${COMPOSER_HOME}/vendor/bin
-DRUPAL_ROOT=$(pwd)/$(grep webroot .lando.yml | cut -d':' -f2 | xargs)
 LANDO_APP_NAME=${LANDO_APP_NAME:-$(grep ^name: .lando.yml | cut -d':' -f2 | xargs)}
 LOGS_DIR=${DRUPAL_ROOT}/logs
 TESTS_DIR=${DRUPAL_ROOT}/tests
