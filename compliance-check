@@ -10,7 +10,7 @@
 # but in order to view the report, the Lando project must be started.
 
 # Run pre-flight checks.
-[ ! -f .lando.yml ] && echo ".lando.yml is missing.  Run 'lando init' to add or cd to the directory where it can be found." && exit 1
+[ ! -f .lando.yml ] && echo ".lando.yml is missing. Run 'lando init' to add or cd to the directory where it can be found." && exit 1
 COMPOSER=$(command -v composer 2> /dev/null)
 [ -z "${COMPOSER}" ] && echo "composer command not found. See https://getcomposer.org/download/." && exit 1
 CGR=$(command -v cgr 2> /dev/null)
@@ -70,13 +70,13 @@ if [ ! -f ${BIN_DIR}/phpcpd ]; then
 fi
 echo "Running php copy and paste detection..."
 if [ -d ${CUSTOM_PROFILE_DIR} ]; then
-  phpcpd --log-pmd ${LOGS_DIR}/phpcpd.xml --suffix ".php,.module,.theme,.profile,.inc,.test,.install" ${CUSTOM_PROFILE_DIR} || :
+  phpcpd --log-pmd ${LOGS_DIR}/phpcpd-profile.xml --suffix ".php,.module,.theme,.profile,.inc,.test,.install" ${CUSTOM_PROFILE_DIR} || :
 fi
 if [ -d ${CUSTOM_MODULE_DIR} ]; then
-  phpcpd --log-pmd ${LOGS_DIR}/phpcpd.xml --suffix ".php,.module,.theme,.profile,.inc,.test,.install" ${CUSTOM_MODULE_DIR} || :
+  phpcpd --log-pmd ${LOGS_DIR}/phpcpd-module.xml --suffix ".php,.module,.theme,.profile,.inc,.test,.install" ${CUSTOM_MODULE_DIR} || :
 fi
 if [ -d ${CUSTOM_THEME_DIR} ]; then
-  phpcpd --log-pmd ${LOGS_DIR}/phpcpd.xml --suffix ".php,.module,.theme,.profile,.inc,.test,.install" ${CUSTOM_THEME_DIR} || :
+  phpcpd --log-pmd ${LOGS_DIR}/phpcpd-theme.xml --suffix ".php,.module,.theme,.profile,.inc,.test,.install" ${CUSTOM_THEME_DIR} || :
 fi
 
 # Configure codesniffer standards to check.
@@ -94,13 +94,13 @@ fi
 # for info about the operator on the end of the command.
 echo "Running php code sniffer..."
 if [ -d ${CUSTOM_PROFILE_DIR} ]; then
-  phpcs --report=checkstyle --report-file=${LOGS_DIR}/phpcs.xml --extensions=php,module,theme,profile,inc,test,install ${CUSTOM_PROFILE_DIR} || :
+  phpcs --report=checkstyle --report-file=${LOGS_DIR}/phpcs-profile.xml --extensions=php,module,theme,profile,inc,test,install ${CUSTOM_PROFILE_DIR} || :
 fi
 if [ -d ${CUSTOM_MODULE_DIR} ]; then
-  phpcs --report=checkstyle --report-file=${LOGS_DIR}/phpcs.xml --extensions=php,module,theme,profile,inc,test,install ${CUSTOM_MODULE_DIR} || :
+  phpcs --report=checkstyle --report-file=${LOGS_DIR}/phpcs-module.xml --extensions=php,module,theme,profile,inc,test,install ${CUSTOM_MODULE_DIR} || :
 fi
 if [ -d ${CUSTOM_THEME_DIR} ]; then
-  phpcs --report=checkstyle --report-file=${LOGS_DIR}/phpcs.xml --extensions=php,module,theme,profile,inc,test,install ${CUSTOM_THEME_DIR} || :
+  phpcs --report=checkstyle --report-file=${LOGS_DIR}/phpcs-theme.xml --extensions=php,module,theme,profile,inc,test,install ${CUSTOM_THEME_DIR} || :
 fi
 
 # Run PHP Mess Detector to find potential refactoring opportunities.
@@ -109,13 +109,13 @@ if [ ! -f ${BIN_DIR}/phpmd ]; then
 fi
 echo "Running php mess detector..."
 if [ -d ${CUSTOM_PROFILE_DIR} ]; then
-  phpmd ${CUSTOM_PROFILE_DIR} xml cleancode,codesize,controversial,design,naming,unusedcode --reportfile ${LOGS_DIR}/phpmd.xml --suffixes php,module,theme,profile,inc,test,install || :
+  phpmd ${CUSTOM_PROFILE_DIR} xml cleancode,codesize,controversial,design,naming,unusedcode --reportfile ${LOGS_DIR}/phpmd-profile.xml --suffixes php,module,theme,profile,inc,test,install || :
 fi
 if [ -d ${CUSTOM_MODULE_DIR} ]; then
-  phpmd ${CUSTOM_MODULE_DIR} xml cleancode,codesize,controversial,design,naming,unusedcode --reportfile ${LOGS_DIR}/phpmd.xml --suffixes php,module,theme,profile,inc,test,install || :
+  phpmd ${CUSTOM_MODULE_DIR} xml cleancode,codesize,controversial,design,naming,unusedcode --reportfile ${LOGS_DIR}/phpmd-module.xml --suffixes php,module,theme,profile,inc,test,install || :
 fi
 if [ -d ${CUSTOM_THEME_DIR} ]; then
-  phpmd ${CUSTOM_THEME_DIR} xml cleancode,codesize,controversial,design,naming,unusedcode --reportfile ${LOGS_DIR}/phpmd.xml --suffixes php,module,theme,profile,inc,test,install || :
+  phpmd ${CUSTOM_THEME_DIR} xml cleancode,codesize,controversial,design,naming,unusedcode --reportfile ${LOGS_DIR}/phpmd-theme.xml --suffixes php,module,theme,profile,inc,test,install || :
 fi
 
 # Use code browser to augment the logs.
