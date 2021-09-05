@@ -1,0 +1,12 @@
+services:
+  appserver:
+    build:
+      - composer global require consolidation/cgr
+      - cd /tmp && git clone https://github.com/uberhacker/compliance-check.git
+      - cp /tmp/compliance-check/compliance-check /var/www/.composer/vendor/bin
+      - rm -rf /tmp/compliance-check
+tooling:
+  compliance-check:
+    service: appserver
+    description: Run Drupal coding standards compliance check
+    cmd: compliance-check
