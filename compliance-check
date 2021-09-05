@@ -68,15 +68,26 @@ fi
 if [ ! -f ${BIN_DIR}/phpcpd ]; then
   ${CGR} sebastian/phpcpd
 fi
-echo "Running php copy and paste detection..."
+PHPCPD_VERSION=$(phpcpd | head -1 | cut -d' ' -f2 | cut -d'.' -f1)
+case ${PHPCPD_VERSION} in
+  4)
+    PHPCPD_EXTENSIONS=--names
+    ;;
+  *)
+    PHPCPD_EXTENSIONS=--suffix
+    ;;
+esac
 if [ -d ${CUSTOM_PROFILE_DIR} ]; then
-  phpcpd --log-pmd ${LOGS_DIR}/phpcpd-profile.xml --suffix ".php,.module,.theme,.profile,.inc,.test,.install" ${CUSTOM_PROFILE_DIR} || :
+  echo "Running php copy and paste detection for custom profiles..."
+  phpcpd --log-pmd ${LOGS_DIR}/phpcpd-profile.xml ${PHPCPD_EXTENSIONS} .php,.module,.theme,.profile,.inc,.test,.install ${CUSTOM_PROFILE_DIR} || :
 fi
 if [ -d ${CUSTOM_MODULE_DIR} ]; then
-  phpcpd --log-pmd ${LOGS_DIR}/phpcpd-module.xml --suffix ".php,.module,.theme,.profile,.inc,.test,.install" ${CUSTOM_MODULE_DIR} || :
+  echo "Running php copy and paste detection for custom modules..."
+  phpcpd --log-pmd ${LOGS_DIR}/phpcpd-module.xml ${PHPCPD_EXTENSIONS} .php,.module,.theme,.profile,.inc,.test,.install ${CUSTOM_MODULE_DIR} || :
 fi
 if [ -d ${CUSTOM_THEME_DIR} ]; then
-  phpcpd --log-pmd ${LOGS_DIR}/phpcpd-theme.xml --suffix ".php,.module,.theme,.profile,.inc,.test,.install" ${CUSTOM_THEME_DIR} || :
+  echo "Running php copy and paste detection for custom themes..."
+  phpcpd --log-pmd ${LOGS_DIR}/phpcpd-theme.xml ${PHPCPD_EXTENSIONS} .php,.module,.theme,.profile,.inc,.test,.install ${CUSTOM_THEME_DIR} || :
 fi
 
 # Configure codesniffer standards to check.
@@ -92,14 +103,16 @@ fi
 
 # Run codesniffer with the Drupal standards checks. See http://unix.wikia.com/wiki/Force_exit_code_0
 # for info about the operator on the end of the command.
-echo "Running php code sniffer..."
 if [ -d ${CUSTOM_PROFILE_DIR} ]; then
+  echo "Running php code sniffer for custom profiles..."
   phpcs --report=checkstyle --report-file=${LOGS_DIR}/phpcs-profile.xml --extensions=php,module,theme,profile,inc,test,install ${CUSTOM_PROFILE_DIR} || :
 fi
 if [ -d ${CUSTOM_MODULE_DIR} ]; then
+  echo "Running php code sniffer for custom modules..."
   phpcs --report=checkstyle --report-file=${LOGS_DIR}/phpcs-module.xml --extensions=php,module,theme,profile,inc,test,install ${CUSTOM_MODULE_DIR} || :
 fi
 if [ -d ${CUSTOM_THEME_DIR} ]; then
+  echo "Running php code sniffer for custom themes..."
   phpcs --report=checkstyle --report-file=${LOGS_DIR}/phpcs-theme.xml --extensions=php,module,theme,profile,inc,test,install ${CUSTOM_THEME_DIR} || :
 fi
 
@@ -107,14 +120,16 @@ fi
 if [ ! -f ${BIN_DIR}/phpmd ]; then
   ${CGR} phpmd/phpmd
 fi
-echo "Running php mess detector..."
 if [ -d ${CUSTOM_PROFILE_DIR} ]; then
+  echo "Running php mess detector for custom profiles..."
   phpmd ${CUSTOM_PROFILE_DIR} xml cleancode,codesize,controversial,design,naming,unusedcode --reportfile ${LOGS_DIR}/phpmd-profile.xml --suffixes php,module,theme,profile,inc,test,install || :
 fi
 if [ -d ${CUSTOM_MODULE_DIR} ]; then
+  echo "Running php mess detector for custom modules..."
   phpmd ${CUSTOM_MODULE_DIR} xml cleancode,codesize,controversial,design,naming,unusedcode --reportfile ${LOGS_DIR}/phpmd-module.xml --suffixes php,module,theme,profile,inc,test,install || :
 fi
 if [ -d ${CUSTOM_THEME_DIR} ]; then
+  echo "Running php mess detector for custom themes..."
   phpmd ${CUSTOM_THEME_DIR} xml cleancode,codesize,controversial,design,naming,unusedcode --reportfile ${LOGS_DIR}/phpmd-theme.xml --suffixes php,module,theme,profile,inc,test,install || :
 fi
 
@@ -122,7 +137,11 @@ fi
 if [ ! -f ${BIN_DIR}/phpcb ]; then
   ${CGR} mayflower/php-codebrowser
 fi
+echo
+echo "Using php code browser to augment the logs..."
 phpcb -l ${LOGS_DIR} -o ${TESTS_DIR}
 
 # View test results in the browser.
+echo
 echo "Visit http://${LANDO_APP_NAME}.lndo.site/tests/index.html to view the complete test results."
+echo
