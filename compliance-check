@@ -10,21 +10,32 @@
 # but in order to view the report, the Lando project must be started.
 
 # Run pre-flight checks.
-[ ! -f .lando.yml ] && echo ".lando.yml is missing. Run 'lando init' to add or cd to the directory where it can be found." && exit 1
+if test $1; then
+  case $1 in
+    -h|--help)
+      echo "Usage: $(basename $0) [web root]"
+      exit
+      ;;
+  esac
+  DRUPAL_ROOT=$(pwd)/$1
+else
+  [ ! -f .lando.yml ] && echo ".lando.yml is missing. Run 'lando init' to add or cd to the directory where it can be found." && exit 1
+  DRUPAL_ROOT=$(pwd)/$(grep webroot .lando.yml | cut -d: -f2 | xargs)
+fi
+[ ! -d ${DRUPAL_ROOT} ] && echo "Directory '${DRUPAL_ROOT}' does not exist." && exit 1
 COMPOSER=$(command -v composer 2> /dev/null)
 [ -z "${COMPOSER}" ] && echo "composer command not found. See https://getcomposer.org/download/." && exit 1
 CGR=$(command -v cgr 2> /dev/null)
 [ -z "${CGR}" ] && echo "cgr command not found. See https://github.com/consolidation/cgr." && exit 1
 DRUSH=$(command -v drush 2> /dev/null)
 [ -z "${DRUSH}" ] && echo "drush command not found. See https://www.drush.org/latest/install/." && exit 1
-DRUPAL_ROOT=$(pwd)/$(grep webroot .lando.yml | cut -d':' -f2 | xargs)
-DRUPAL_VERSION=$(${DRUSH} status --root=${DRUPAL_ROOT} --fields='Drupal version' 2> /dev/null | cut -d':' -f2 | xargs | cut -d'.' -f1)
+DRUPAL_VERSION=$(${DRUSH} status --root=${DRUPAL_ROOT} --fields='Drupal version' 2> /dev/null | cut -d: -f2 | xargs | cut -d. -f1)
 [ -z "${DRUPAL_VERSION}" ] && echo "Drupal codebase not found." && exit 1
 
 # Set environment variables.
 COMPOSER_HOME=$(${COMPOSER} global config home)
 BIN_DIR=${COMPOSER_HOME}/vendor/bin
-LANDO_APP_NAME=${LANDO_APP_NAME:-$(grep ^name: .lando.yml | cut -d':' -f2 | xargs)}
+LANDO_APP_NAME=${LANDO_APP_NAME:-$(grep ^name: .lando.yml | cut -d: -f2 | xargs)}
 LOGS_DIR=${DRUPAL_ROOT}/logs
 TESTS_DIR=${DRUPAL_ROOT}/tests
 THEME_DIR=themes
@@ -40,8 +51,8 @@ CUSTOM_MODULE_DIR=${DRUPAL_ROOT}/${MODULE_DIR}/custom
 CUSTOM_PROFILE_DIR=${DRUPAL_ROOT}/${PROFILE_DIR}/custom
 
 # Prepare directories.
-[ ! -d ${LOGS_DIR} ] && mkdir ${LOGS_DIR}
-[ ! -d ${TESTS_DIR} ] && mkdir ${TESTS_DIR}
+rm -rf ${LOGS_DIR} ${TESTS_DIR}
+mkdir ${LOGS_DIR} ${TESTS_DIR}
 
 # Install php parallel-lint.
 if [ ! -f ${BIN_DIR}/parallel-lint ]; then
@@ -50,13 +61,17 @@ fi
 echo "Running php linter..."
 parallel-lint ${DRUPAL_ROOT}
 
+# Install symfony console (needed for yaml-lint).
+if [ ! -d ${COMPOSER_HOME}/global/symfony/console ]; then
+  ${CGR} symfony/console
+fi
+echo "Running yaml linter..."
+yaml-lint .
+
 # Install security-checker.
 if [ ! -f ${BIN_DIR}/security-checker ]; then
   ${CGR} enlightn/security-checker
 fi
-
-echo "Running yaml linter..."
-yaml-lint .
 
 # Run security-checker.
 if [[ ${DRUPAL_VERSION} > 7 ]]; then
