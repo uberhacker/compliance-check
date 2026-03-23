@@ -112,7 +112,7 @@ if [ ! -f ${BIN_DIR}/phpcs ]; then
   phpcs -i
 fi
 if [ ! -d ${HOME}/drupal_code_standards ]; then
-  cd && git clone https://github.com/nilswloewen/drupal_code_standards.git
+  cd && git clone https://github.com/maycolss/drupal_code_standards.git
   phpcs --config-set default_standard ${HOME}/drupal_code_standards/phpcs-custom-standard.xml
 fi
 
